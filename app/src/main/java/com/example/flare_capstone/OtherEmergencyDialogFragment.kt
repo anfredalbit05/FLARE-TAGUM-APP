@@ -9,7 +9,7 @@ class OtherEmergencyDialogFragment(private val report: OtherEmergency) : DialogF
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val message = """
-            Type: ${report.emergencyType}
+            Type: ${report.type}
             Name: ${report.name}
             Contact: ${report.contact}
             Date: ${report.date}

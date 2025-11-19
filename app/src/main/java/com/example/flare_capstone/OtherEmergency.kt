@@ -1,7 +1,7 @@
 package com.example.flare_capstone
 
 data class OtherEmergency(
-    val emergencyType: String,
+    val type: String,
     val name: String,
     val contact: String,
     val date: String,
@@ -14,5 +14,6 @@ data class OtherEmergency(
     val timestamp: Long,
     var status: String = "Pending",
     var read: Boolean,
-    val fireStationName: String = "" // <-- new field
+    var fireStationName: String = "",
+    var photoBase64: String = ""    // ✅ add this line// <-- new field
 )

@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.flare_capstone"
-        minSdk = 30
+        minSdk = 33
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -64,7 +64,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
 
     // Firebase Services (No need to specify version anymore after BOM)
-    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-auth:24.0.1")
     implementation("com.google.firebase:firebase-database") // Regular Firebase Database (no KTX)
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-messaging")
@@ -104,10 +104,16 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.18") // OSM map
     implementation("com.google.android.gms:play-services-location:21.2.0")// fused location
     implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("com.google.firebase:firebase-database:22.0.0")
+    implementation("com.google.firebase:firebase-database:22.0.1")
 
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    implementation("androidx.camera:camera-core:1.4.0")
+    implementation("androidx.camera:camera-camera2:1.4.0")
+    implementation("androidx.camera:camera-lifecycle:1.4.0")
+    implementation("androidx.camera:camera-view:1.4.0")   // <-- provides PreviewView
+    implementation("com.google.android.material:material:1.12.0")
 
 
 }

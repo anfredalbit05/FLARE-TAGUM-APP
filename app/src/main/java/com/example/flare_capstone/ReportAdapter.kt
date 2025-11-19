@@ -43,7 +43,6 @@ class ReportAdapter(
         when (val item = reports[position]) {
             is FireReport -> {
                 holder.txtDate.text = item.date
-                holder.txtAlert.text = item.alertLevel
                 holder.txtStatus.text = item.status
                 when (item.status.lowercase()) {
                     "ongoing" -> holder.txtStatus.setTextColor(Color.parseColor("#E00024"))
@@ -53,7 +52,7 @@ class ReportAdapter(
             }
             is OtherEmergency -> {
                 holder.txtDate.text = item.date
-                holder.txtAlert.text = item.emergencyType
+                holder.txtAlert.text = item.type
                 holder.txtStatus.text = item.status
                 when (item.status.lowercase()) {
                     "ongoing" -> holder.txtStatus.setTextColor(Color.parseColor("#E00024"))

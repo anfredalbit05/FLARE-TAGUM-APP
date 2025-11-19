@@ -1,33 +1,43 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/verifyCard"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="wrap_content"
+    app:cardUseCompatPadding="true"
+    app:cardCornerRadius="20dp"
+    app:strokeColor="?attr/colorOutline"
+    app:strokeWidth="1dp"
+    android:backgroundTint="@android:color/white"
+    android:elevation="8dp">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/verifyCard"
-        android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:contentDescription="@string/app_name"
-        app:cardUseCompatPadding="true"
-        app:cardCornerRadius="20dp"
-        app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/closeBtn"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Close dialog"
+            app:tint="?attr/colorOnSurface"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/contentLayout"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center_horizontal">
+            android:gravity="center_horizontal"
+            app:layout_constraintTop_toBottomOf="@id/closeBtn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginTop="12dp">
 
-            <!-- Title -->
             <TextView
                 android:id="@+id/titleTv"
                 android:layout_width="wrap_content"
@@ -37,17 +47,14 @@
                 android:textSize="20sp"
                 android:textColor="?attr/colorOnSurface" />
 
-            <!-- Email -->
             <TextView
                 android:id="@+id/emailTv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="16sp"
-                android:textColor="?attr/colorPrimary"
-                android:contentDescription="Email address to verify" />
+                android:textColor="?attr/colorPrimary" />
 
-            <!-- Helper text -->
             <TextView
                 android:id="@+id/helperTv"
                 android:layout_width="match_parent"
@@ -58,7 +65,6 @@
                 android:alpha="0.9"
                 android:textColor="?attr/colorOnSurface" />
 
-            <!-- Timer -->
             <TextView
                 android:id="@+id/timerTv"
                 android:layout_width="wrap_content"
@@ -68,7 +74,6 @@
                 android:textSize="14sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
-            <!-- I've verified -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/verifiedBtn"
                 android:layout_width="match_parent"
@@ -80,32 +85,18 @@
                 app:cornerRadius="24dp"
                 app:backgroundTint="#E00024" />
 
-            <!-- Resend link (start disabled; enable from code when timer ends) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/resendBtn"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="12dp"
                 android:text="Resend link"
-                android:textColor="@color/white"
+                android:textColor="@android:color/white"
                 android:textAllCaps="false"
                 android:enabled="false"
                 app:cornerRadius="24dp"
                 android:backgroundTint="#E87F2E"/>
 
-            <!-- Use a different email -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/changeEmailBtn"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/black"
-                android:text="Use a different email"
-                android:textAllCaps="false"
-                style="?attr/materialButtonOutlinedStyle"
-                app:cornerRadius="24dp" />
-
-            <!-- Optional tiny hint -->
             <TextView
                 android:id="@+id/spamHintTv"
                 android:layout_width="match_parent"
@@ -115,7 +106,6 @@
                 android:textSize="12sp"
                 android:alpha="0.8"
                 android:textColor="?attr/colorOnSurface" />
-
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

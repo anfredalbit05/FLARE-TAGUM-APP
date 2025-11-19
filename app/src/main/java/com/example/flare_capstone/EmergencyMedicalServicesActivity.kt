@@ -9,7 +9,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
-import android.util.Base64
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
@@ -23,10 +22,8 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.flare_capstone.databinding.ActivityOtherEmergencyBinding
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationServices
+import com.example.flare_capstone.databinding.ActivityEmergencyMedicalServicesBinding
+import com.google.android.gms.location.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import java.io.File
@@ -36,26 +33,28 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import android.util.Base64
 
-class OtherEmergencyActivity : AppCompatActivity() {
+class EmergencyMedicalServicesActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityOtherEmergencyBinding
+    /* ---------------- View / Firebase / Location ---------------- */
+    private lateinit var binding: ActivityEmergencyMedicalServicesBinding
     private lateinit var auth: FirebaseAuth
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var connectivityManager: ConnectivityManager
 
-    // dropdown selection
-    private var selectedEmergency: String? = null
+    /* ---------------- Dropdown ---------------- */
+    private var selectedType: String? = null
 
-    // location
+    /* ---------------- Location State ---------------- */
     private var latitude = 0.0
     private var longitude = 0.0
-    private var exactLocation: String = ""
+    private var exactLocation: String = ""   // reverse-geocoded or “Within Tagum vicinity – <maps>”
 
     private val LOCATION_PERMISSION_REQUEST_CODE = 1001
     private val CAMERA_PERMISSION_REQUEST_CODE = 1002
 
-    // Tagum geofence
+    /* ---------------- Tagum geofence ---------------- */
     private val TAGUM_CENTER_LAT = 7.447725
     private val TAGUM_CENTER_LON = 125.804150
     private val TAGUM_RADIUS_METERS = 11_000f
@@ -63,20 +62,22 @@ class OtherEmergencyActivity : AppCompatActivity() {
     private var locationConfirmed = false
     private var isResolvingLocation = false
 
-    // dialogs
+    /* ---------------- Dialogs ---------------- */
     private var loadingDialog: AlertDialog? = null
     private var locatingDialog: AlertDialog? = null
+    private var locatingDialogMessage: TextView? = null
 
-    // CameraX (optional photo)
+    /* ---------------- CameraX (optional) ---------------- */
     private lateinit var cameraExecutor: ExecutorService
     private var imageCapture: ImageCapture? = null
     private var capturedFile: File? = null
     private var capturedOnce = false
 
+    /* ========================================================= */
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyTheme(this)
         super.onCreate(savedInstanceState)
-        binding = ActivityOtherEmergencyBinding.inflate(layoutInflater)
+        binding = ActivityEmergencyMedicalServicesBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         auth = FirebaseAuth.getInstance()
@@ -84,34 +85,33 @@ class OtherEmergencyActivity : AppCompatActivity() {
         connectivityManager = getSystemService(ConnectivityManager::class.java)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        // network watcher
+        // Network watcher
         if (!isConnected()) showLoadingDialog("No internet connection") else hideLoadingDialog()
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
 
-        // location gate
+        // Location gate
         beginLocationConfirmation()
         checkPermissionsAndGetLocation()
 
-        // dropdown options from RTDB
+        // Dropdown options from RTDB (Canocotan/ManageApplication/EmergencyMedicalServicesReport/Option)
 //        populateDropdownFromDB()
         populateDropdownStatic()
 
-        // camera (optional)
+        // Camera (optional)
         checkCameraPermissionAndStart()
-        binding.btnCapture.setOnClickListener {
-            if (capturedOnce) retakePhoto() else captureOnce()
-        }
+        binding.btnCapture.setOnClickListener { if (capturedOnce) retakePhoto() else captureOnce() }
 
+        // Buttons
         binding.cancelButton.setOnClickListener {
             startActivity(Intent(this, DashboardActivity::class.java))
             finish()
         }
         binding.sendButton.setOnClickListener { onSendClicked() }
 
-        // enable/disable based on state
+        // Enable/disable based on state
         updateSendEnabled()
 
-        // optional toolbar back
+        // Toolbar back (optional)
         binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
@@ -119,10 +119,12 @@ class OtherEmergencyActivity : AppCompatActivity() {
         super.onDestroy()
         kotlin.runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
         locatingDialog?.dismiss()
+        locatingDialog = null
+        locatingDialogMessage = null
         cameraExecutor.shutdown()
     }
 
-    /* ---------------- Connectivity ---------------- */
+    /* ======================== Connectivity ===================== */
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             runOnUiThread {
@@ -145,13 +147,13 @@ class OtherEmergencyActivity : AppCompatActivity() {
     }
 
     private fun showLoadingDialog(message: String) {
+
         if (loadingDialog == null) {
             val builder = AlertDialog.Builder(this)
             val view = layoutInflater.inflate(R.layout.custom_loading_dialog, null)
             builder.setView(view).setCancelable(false)
             loadingDialog = builder.create()
         }
-
 
         loadingDialog?.show()
         loadingDialog?.findViewById<TextView>(R.id.loading_message)?.text = message
@@ -168,11 +170,11 @@ class OtherEmergencyActivity : AppCompatActivity() {
     }
     private fun hideLoadingDialog() { loadingDialog?.dismiss() }
 
-    /* ---------------- Permissions & Location ---------------- */
+    /* ======================== Permissions & Location =========== */
     private fun checkPermissionsAndGetLocation() {
         val fineOk = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseOk = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (fineOk && coarseOk) getLastLocation()
+        if (fineOk && coarseOk) requestOneFix()
         else ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
@@ -181,63 +183,48 @@ class OtherEmergencyActivity : AppCompatActivity() {
     }
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
-    private fun getLastLocation() {
+    private fun requestOneFix() {
+        // Same flow as FireLevel: request a single high-accuracy update, then reverse-geocode.
+        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10_000L)
+            .setMinUpdateIntervalMillis(5_000L)
+            .setMaxUpdates(1)
+            .build()
         updateLocatingDialog("Getting GPS fix…")
-        fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
-            if (loc != null) {
-                latitude = loc.latitude
-                longitude = loc.longitude
-                FetchBarangayAddressTask(this, latitude, longitude).execute()
-                evaluateTagumGateWith(null)
-            } else {
-                val req = LocationRequest.create().apply {
-                    interval = 10_000L; fastestInterval = 5_000L
-                    priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-                    numUpdates = 1
-                }
-                fusedLocationClient.requestLocationUpdates(req, object : com.google.android.gms.location.LocationCallback() {
-                    override fun onLocationResult(res: com.google.android.gms.location.LocationResult) {
-                        val l = res.lastLocation ?: return
-                        latitude = l.latitude; longitude = l.longitude
-                        fusedLocationClient.removeLocationUpdates(this)
-                        FetchBarangayAddressTask(this@OtherEmergencyActivity, latitude, longitude).execute()
-                        evaluateTagumGateWith(null)
-                    }
-                }, mainLooper)
 
-                updateLocatingDialog("Waiting for GPS…")
+        fusedLocationClient.requestLocationUpdates(req, object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val l = result.lastLocation ?: return
+                latitude = l.latitude
+                longitude = l.longitude
+                fusedLocationClient.removeLocationUpdates(this)
+
+                // Match Fire screen wording
+                updateLocatingDialog("Getting Exact Location…")
+                FetchBarangayAddressTask(this@EmergencyMedicalServicesActivity, latitude, longitude).execute()
             }
-        }.addOnFailureListener {
-            updateLocatingDialog("Location error — retrying…")
-            evaluateTagumGateWith(null)
-        }
+        }, mainLooper)
     }
 
     /** Called by reverse-geocoding task */
     fun handleFetchedAddress(address: String?) {
-        exactLocation = address?.trim().orEmpty().ifEmpty { "Unknown Location" }
-        evaluateTagumGateWith(address)
-
-        if (tagumOk) {
-            val msg = if (exactLocation.isNotBlank() && exactLocation != "Unknown Location")
-                "Location confirmed: $exactLocation"
-            else
-                "Location confirmed within Tagum vicinity"
-            endLocationConfirmation(true, msg)
-        } else {
-            endLocationConfirmation(false, "Outside Tagum area. You can't submit a report.")
-        }
-    }
-
-    private fun evaluateTagumGateWith(address: String?) {
-        val textOk = !address.isNullOrBlank() && address.contains("tagum", ignoreCase = true)
+        // Same gate as in FireLevel
+        val cleaned = address?.trim().orEmpty()
+        val textOk = cleaned.isNotBlank() && cleaned.contains("tagum", ignoreCase = true)
         val geoOk  = isWithinTagumByDistance(latitude, longitude)
         tagumOk = textOk || geoOk
 
-        if (tagumOk && (address.isNullOrBlank() || address == "Unknown Location") && geoOk) {
-            exactLocation = "Within Tagum vicinity – https://www.google.com/maps?q=$latitude,$longitude"
+        exactLocation = when {
+            cleaned.isNotBlank() -> cleaned
+            tagumOk && geoOk     -> "Within Tagum vicinity – https://www.google.com/maps?q=$latitude,$longitude"
+            else                 -> ""
         }
-        updateSendEnabled()
+
+        if (tagumOk) {
+            val suffix = if (exactLocation.isNotBlank()) ": $exactLocation" else ""
+            endLocationConfirmation(true, "Location confirmed$suffix")
+        } else {
+            endLocationConfirmation(false, "Outside Tagum area. You can't submit a report.")
+        }
     }
 
     private fun isWithinTagumByDistance(lat: Double, lon: Double): Boolean {
@@ -246,7 +233,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
         return out[0] <= TAGUM_RADIUS_METERS
     }
 
-    /* ---------------- Non-dismissible locating dialog ---------------- */
+    /* =================== Non-dismissible locating dialog ======= */
     private fun beginLocationConfirmation(hint: String = "Confirming location…") {
         isResolvingLocation = true
         locationConfirmed = false
@@ -264,49 +251,63 @@ class OtherEmergencyActivity : AppCompatActivity() {
     private fun showLocatingDialog(initialText: String) {
         if (locatingDialog?.isShowing == true) return
         val view = layoutInflater.inflate(R.layout.custom_loading_dialog, null)
-        view.findViewById<TextView>(R.id.loading_message)?.text = initialText
+        locatingDialogMessage = view.findViewById(R.id.loading_message)
+        locatingDialogMessage?.text = initialText
+
         locatingDialog = AlertDialog.Builder(this)
             .setView(view)
             .setCancelable(false)
-            .create()
-        locatingDialog?.show()
+            .create().also { it.show() }
     }
     private fun updateLocatingDialog(text: String) {
-        locatingDialog?.findViewById<TextView>(R.id.loading_message)?.text = text
+        locatingDialogMessage?.text = text
     }
     private fun hideLocatingDialog() {
+        locatingDialogMessage = null
         locatingDialog?.dismiss()
         locatingDialog = null
     }
 
-
-    /* ---------------- Dropdown from RTDB ---------------- */
+//
+//    /* =================== Dropdown from RTDB (EMS Option) ======= */
 //    private fun populateDropdownFromDB() {
 //        val ref = FirebaseDatabase.getInstance().reference
 //            .child("CanocotanFireStation")
 //            .child("ManageApplication")
-//            .child("OtherEmergencyReport")
+//            .child("EmergencyMedicalServicesReport")
 //            .child("Option")
 //
 //        ref.addListenerForSingleValueEvent(object : ValueEventListener {
 //            override fun onDataChange(s: DataSnapshot) {
 //                val asString = s.getValue(String::class.java)
-//                if (!asString.isNullOrBlank()) {
-//                    val items = asString.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-//                    setDropdown(items); return
-//                }
-//                if (s.exists() && s.childrenCount > 0) {
-//                    val list = mutableListOf<String>()
-//                    s.children.forEach { c ->
-//                        c.getValue(String::class.java)?.trim()?.takeIf { it.isNotEmpty() }?.let(list::add)
+//                val items = when {
+//                    !asString.isNullOrBlank() ->
+//                        asString.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+//                    s.exists() && s.childrenCount > 0 -> {
+//                        val list = mutableListOf<String>()
+//                        s.children.forEach { c ->
+//                            c.getValue(String::class.java)?.trim()?.takeIf { it.isNotEmpty() }?.let(list::add)
+//                        }
+//                        list
 //                    }
-//                    setDropdown(list)
-//                } else {
-//                    Toast.makeText(this@OtherEmergencyActivity, "No options found.", Toast.LENGTH_SHORT).show()
+//                    else -> emptyList()
+//                }
+//                if (items.isEmpty()) {
+//                    Toast.makeText(this@EmergencyMedicalServicesActivity, "No options found.", Toast.LENGTH_SHORT).show()
+//                    return
+//                }
+//                val adapter = ArrayAdapter(this@EmergencyMedicalServicesActivity, android.R.layout.simple_list_item_1, items)
+//                binding.emergencyMedicalServicesDropdown.setAdapter(adapter)
+//                binding.emergencyMedicalServicesDropdown.setOnClickListener {
+//                    binding.emergencyMedicalServicesDropdown.showDropDown()
+//                }
+//                binding.emergencyMedicalServicesDropdown.setOnItemClickListener { _, _, pos, _ ->
+//                    selectedType = items[pos]
+//                    updateSendEnabled()
 //                }
 //            }
 //            override fun onCancelled(e: DatabaseError) {
-//                Toast.makeText(this@OtherEmergencyActivity, "Failed to load options: ${e.message}", Toast.LENGTH_SHORT).show()
+//                Toast.makeText(this@EmergencyMedicalServicesActivity, "Failed to load options: ${e.message}", Toast.LENGTH_SHORT).show()
 //            }
 //        })
 //    }
@@ -315,11 +316,8 @@ class OtherEmergencyActivity : AppCompatActivity() {
     /** Static dropdown list for fire report types */
     private fun populateDropdownStatic() {
         val fireTypes = listOf(
-            "Fallen Tree",
-            "Collapsed Structure",
-            "Flood",
-            "Animal Rescue",
-            "Hazardous Material (e.g. Gas Leak)",
+            "Vehicular Accident",
+            "Patient Transport",
         )
 
         val adapter = ArrayAdapter(
@@ -328,21 +326,20 @@ class OtherEmergencyActivity : AppCompatActivity() {
             fireTypes
         )
 
-        binding.otherEmergencyDropdown.setAdapter(adapter)
-        binding.otherEmergencyDropdown.setOnClickListener {
-            binding.otherEmergencyDropdown.showDropDown()
+        binding.emergencyMedicalServicesDropdown.setAdapter(adapter)
+        binding.emergencyMedicalServicesDropdown.setOnClickListener {
+            binding.emergencyMedicalServicesDropdown.showDropDown()
         }
 
         // ✅ When the user selects an item:
-        binding.otherEmergencyDropdown.setOnItemClickListener { _, _, position, _ ->
-            selectedEmergency = fireTypes[position]
-            binding.toolbar.title = "Other Emergency"  // optional visual feedback
+        binding.emergencyMedicalServicesDropdown.setOnItemClickListener { _, _, position, _ ->
+            selectedType = fireTypes[position]
+            binding.toolbar.title = "Emergency Medical Services"  // optional visual feedback
             updateSendEnabled() // ✅ enable the Send button when selection made
         }
     }
 
-
-    /* ---------------- CameraX (optional) ---------------- */
+    /* ========================= CameraX ========================= */
     private fun checkCameraPermissionAndStart() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             startCameraPreview()
@@ -372,11 +369,11 @@ class OtherEmergencyActivity : AppCompatActivity() {
 
     private fun captureOnce() {
         val ic = imageCapture ?: return
-        val file = File.createTempFile("other_", ".jpg", cacheDir)
+        val file = File.createTempFile("ems_", ".jpg", cacheDir)
         val opts = ImageCapture.OutputFileOptions.Builder(file).build()
         ic.takePicture(opts, cameraExecutor, object : ImageCapture.OnImageSavedCallback {
             override fun onError(e: ImageCaptureException) {
-                runOnUiThread { Toast.makeText(this@OtherEmergencyActivity, "Capture failed: ${e.message}", Toast.LENGTH_SHORT).show() }
+                runOnUiThread { Toast.makeText(this@EmergencyMedicalServicesActivity, "Capture failed: ${e.message}", Toast.LENGTH_SHORT).show() }
             }
             override fun onImageSaved(r: ImageCapture.OutputFileResults) {
                 capturedFile = file
@@ -392,7 +389,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
     }
 
     private fun retakePhoto() {
-        try { capturedFile?.delete() } catch (_: Exception) {}
+        kotlin.runCatching { capturedFile?.delete() }
         capturedFile = null
         capturedOnce = false
         binding.capturedPhoto.setImageDrawable(null)
@@ -402,22 +399,18 @@ class OtherEmergencyActivity : AppCompatActivity() {
         binding.btnCapture.text = "Capture"
     }
 
-    /* ---------------- Send flow (Canocotan only) ---------------- */
+    /* =========================== Send ========================== */
     private fun onSendClicked() {
         if (!locationConfirmed || !tagumOk) {
             Toast.makeText(this, "Please wait — confirming your location…", Toast.LENGTH_SHORT).show()
             if (!isResolvingLocation) beginLocationConfirmation()
             return
         }
-        val type = selectedEmergency?.trim().orEmpty()
+        val type = selectedType?.trim().orEmpty()
         if (type.isEmpty()) {
             Toast.makeText(this, "Please choose an Involve!.", Toast.LENGTH_SHORT).show()
-            binding.sendButton.isEnabled = false
-            // Briefly disable to prevent spamming
-            binding.sendButton.postDelayed({ binding.sendButton.isEnabled = true }, 1500)
             return
         }
-
 
         val now = System.currentTimeMillis()
         val dateStr = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(Date(now))
@@ -436,7 +429,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
         """.trimIndent()
 
         AlertDialog.Builder(this)
-            .setTitle("Confirm Emergency Report")
+            .setTitle("Confirm Emergency Medical Report")
             .setMessage(msg)
             .setPositiveButton("Proceed") { _, _ -> sendToCanocotan(now, type) }
             .setNegativeButton("Cancel", null)
@@ -461,7 +454,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
 
                 val photoB64 = capturedFile?.takeIf { it.exists() }?.let { compressAndEncodeBase64(it) } ?: ""
 
-                val report = OtherEmergency(
+                val report = EmergencyMedicalServicesReport(
                     type = type,
                     name = user.name.orEmpty(),
                     contact = user.contact.orEmpty(),
@@ -471,16 +464,14 @@ class OtherEmergencyActivity : AppCompatActivity() {
                     longitude = longitude.toString(),
                     location = "https://www.google.com/maps?q=$latitude,$longitude",
                     exactLocation = exactLocation,
-                    lastReportedTime = currentTime,
                     timestamp = currentTime,
                     status = "Pending",
                     read = false,
-                    fireStationName = "" // will be set dynamically
-                ).apply {
+                    fireStationName = "",
                     photoBase64 = photoB64
-                }
+                )
 
-                // ✅ Nearest ACTIVE station first, fallback to nearest if none active
+                // ✅ Get nearest ACTIVE station first, fallback to nearest if none active
                 val stationsRef = FirebaseDatabase.getInstance().getReference("FireStations")
                 stationsRef.get().addOnSuccessListener { snapshot ->
                     val stationList = mutableListOf<Triple<DataSnapshot, Float, Boolean>>() // (snapshot, distance, isActive)
@@ -509,16 +500,16 @@ class OtherEmergencyActivity : AppCompatActivity() {
                     val stationKey = stationSnap.key ?: return@addOnSuccessListener
                     val stationName = stationSnap.child("stationName").getValue(String::class.java) ?: "Unknown Station"
 
+                    val db = FirebaseDatabase.getInstance().reference
+
                     // ✅ Update fireStationName dynamically
                     report.fireStationName = stationName
 
-                    val db = FirebaseDatabase.getInstance().reference
-
-                    // ✅ Push only under the station's AllReport/FireReport
+                    // ✅ Push only under the station’s AllReport/EmergencyMedicalServicesReport
                     val stationRef = db.child("FireStations")
                         .child(stationKey)
                         .child("AllReport")
-                        .child("OtherEmergencyReport")
+                        .child("EmergencyMedicalServicesReport")
                         .push()
 
                     stationRef.setValue(report)
@@ -542,7 +533,9 @@ class OtherEmergencyActivity : AppCompatActivity() {
 
 
 
-    /* ---------------- Utils ---------------- */
+
+
+    /* =========================== Utils ========================= */
     private fun compressAndEncodeBase64(
         file: File,
         maxDim: Int = 1024,
@@ -581,7 +574,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
         return Base64.encodeToString(data, Base64.NO_WRAP)
     }
 
-    /* ---------------- Permission result ---------------- */
+    /* =================== Permission result ===================== */
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -592,7 +585,7 @@ class OtherEmergencyActivity : AppCompatActivity() {
         when (requestCode) {
             LOCATION_PERMISSION_REQUEST_CODE -> {
                 if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    getLastLocation()
+                    requestOneFix()
                 } else {
                     Toast.makeText(this, "Location permission needed.", Toast.LENGTH_SHORT).show()
                 }
@@ -609,6 +602,6 @@ class OtherEmergencyActivity : AppCompatActivity() {
 
     private fun updateSendEnabled() {
         val hasCoords = !(latitude == 0.0 && longitude == 0.0)
-        binding.sendButton.isEnabled =tagumOk && hasCoords && locationConfirmed
+        binding.sendButton.isEnabled = tagumOk && hasCoords && locationConfirmed
     }
 }

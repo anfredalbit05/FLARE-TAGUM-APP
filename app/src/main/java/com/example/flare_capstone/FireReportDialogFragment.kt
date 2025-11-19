@@ -22,10 +22,6 @@ class FireReportDialogFragment(private val report: FireReport) : DialogFragment(
 
         binding.txtName.text = report.name
         binding.txtContact.text = report.contact
-        binding.txtAlertLevel.text = report.alertLevel
-        binding.txtDate.text = "${report.date} ${report.reportTime}"
-        binding.txtStartTime.text = report.fireStartTime
-        binding.txtHouses.text = report.numberOfHousesAffected.toString()
         binding.txtLocation.text = report.exactLocation
         binding.txtStatus.text = report.status
 

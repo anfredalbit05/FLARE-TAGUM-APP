@@ -3,6 +3,7 @@ package com.example.flare_capstone
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.flare_capstone.databinding.ActivityOnboard1Binding
@@ -12,83 +13,101 @@ class Onboard1Activity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOnboard1Binding
     private lateinit var auth: FirebaseAuth
-    private val logoutTimeLimit: Long = 30 * 60 * 1000 // 30 minutes in milliseconds
-    private var lastInteractionTime: Long = System.currentTimeMillis()
-    private val handler = Handler()
+
+    // Auto logout after 30 minutes (in milliseconds)
+    private val logoutTimeLimit: Long = 30 * 60 * 1000
+    private val handler = Handler(Looper.getMainLooper())
+
+    // Runnable that logs out user when time limit is reached
+    private val logoutRunnable = Runnable {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            auth.signOut()
+            Toast.makeText(this, "You have been logged out due to inactivity", Toast.LENGTH_SHORT).show()
+            redirectToLogin()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityOnboard1Binding.inflate(layoutInflater)
         setContentView(binding.root)
 
         auth = FirebaseAuth.getInstance()
 
-        // Check if the user is already logged in
+        // 🔐 Auto-login check
         val currentUser = auth.currentUser
         if (currentUser != null) {
             val email = currentUser.email
-            if (email == "mabiniff001@gmail.com" ||
-                email == "lafilipinaff001@gmail.com" ||
-                email == "canocotanff001@gmail.com") {
-
-                Toast.makeText(this, "Welcome back, Firefighter", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this, DashboardFireFighterActivity::class.java))
-                finish()
-                return
-            } else {
-                Toast.makeText(this, "Welcome back", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this, DashboardActivity::class.java))
-                finish()
-                return
+            when (email) {
+                "mabiniff001@gmail.com",
+                "lafilipinaff001@gmail.com",
+                "canocotanff001@gmail.com" -> {
+                    Toast.makeText(this, "Welcome back, Firefighter", Toast.LENGTH_SHORT).show()
+                    navigateTo(DashboardFireFighterActivity::class.java)
+                    return
+                }
+                else -> {
+                    Toast.makeText(this, "Welcome back", Toast.LENGTH_SHORT).show()
+                    navigateTo(DashboardActivity::class.java)
+                    return
+                }
             }
         }
 
-
-        // Set listeners for buttons
+        // 🚀 Button listeners
         binding.getStartedButton.setOnClickListener {
-            resetInactivityTimer() // Reset timer on user interaction
-            startActivity(Intent(this, Onboard2Activity::class.java))
-            finish()
+            resetInactivityTimer()
+            navigateTo(Onboard2Activity::class.java)
         }
 
         binding.skipButton.setOnClickListener {
-            resetInactivityTimer() // Reset timer on user interaction
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
+            resetInactivityTimer()
+            navigateTo(MainActivity::class.java)
         }
 
-        // Set a Runnable to log out the user automatically if they are inactive for too long
+        // Start inactivity timer
         handler.postDelayed(logoutRunnable, logoutTimeLimit)
     }
 
-    // This function resets the inactivity timer whenever the user interacts with the app
+    // 🕒 Reset inactivity timer
     private fun resetInactivityTimer() {
-        lastInteractionTime = System.currentTimeMillis()
         handler.removeCallbacks(logoutRunnable)
         handler.postDelayed(logoutRunnable, logoutTimeLimit)
     }
 
-    // Runnable that will be triggered after the inactivity timeout
-    private val logoutRunnable = Runnable {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            auth.signOut() // Sign out the user if inactive for too long
-            Toast.makeText(this, "You have been logged out due to inactivity", Toast.LENGTH_SHORT).show()
+    // 🔁 Triggered on any user touch (not just button click)
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        resetInactivityTimer()
+    }
 
-            // Redirect to login screen
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        }
+    // 🔄 Helper to navigate and close current activity
+    private fun navigateTo(destination: Class<*>) {
+        startActivity(Intent(this, destination))
+        finish()
+    }
+
+    // 🚪 Redirect user to login screen
+    private fun redirectToLogin() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     override fun onResume() {
         super.onResume()
-        resetInactivityTimer() // Reset inactivity timer whenever the activity is resumed
+        resetInactivityTimer()
     }
 
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(logoutRunnable) // Remove the logout callback when the activity is paused
+        handler.removeCallbacks(logoutRunnable)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
     }
 }

@@ -161,7 +161,7 @@ class MyReportActivity : AppCompatActivity(), ReportAdapter.OnItemClickListener 
                         try {
                             if (path.contains("OtherEmergency")) {
                                 val report = OtherEmergency(
-                                    emergencyType = reportSnap.child("emergencyType").getValue(String::class.java) ?: "",
+                                    type = reportSnap.child("type").getValue(String::class.java) ?: "",
                                     name = reportSnap.child("name").getValue(String::class.java) ?: "",
                                     contact = reportSnap.child("contact").getValue(String::class.java) ?: "",
                                     date = reportSnap.child("date").getValue(String::class.java) ?: "",
@@ -182,14 +182,10 @@ class MyReportActivity : AppCompatActivity(), ReportAdapter.OnItemClickListener 
                                 val report = FireReport(
                                     name = reportSnap.child("name").getValue(String::class.java) ?: "",
                                     contact = reportSnap.child("contact").getValue(String::class.java) ?: "",
-                                    fireStartTime = reportSnap.child("fireStartTime").getValue(String::class.java) ?: "",
-                                    numberOfHousesAffected = reportSnap.child("numberOfHousesAffected").getValue(Int::class.java) ?: 0,
-                                    alertLevel = reportSnap.child("alertLevel").getValue(String::class.java) ?: "",
                                     date = reportSnap.child("date").getValue(String::class.java) ?: "",
                                     reportTime = reportSnap.child("reportTime").getValue(String::class.java) ?: "",
                                     latitude = latValue,
                                     longitude = lonValue,
-                                    location = reportSnap.child("location").getValue(String::class.java) ?: "",
                                     exactLocation = reportSnap.child("exactLocation").getValue(String::class.java) ?: "",
                                     timeStamp = reportSnap.child("timeStamp").getValue(Long::class.java) ?: 0L,
                                     status = reportSnap.child("status").getValue(String::class.java) ?: "Pending",
@@ -237,10 +233,9 @@ class MyReportActivity : AppCompatActivity(), ReportAdapter.OnItemClickListener 
         val filtered = allReports.filter {
             when (it) {
                 is FireReport -> it.name.contains(query, true) ||
-                        it.alertLevel.contains(query, true) ||
                         it.status.contains(query, true)
                 is OtherEmergency -> it.name.contains(query, true) ||
-                        it.emergencyType.contains(query, true) ||
+                        it.type.contains(query, true) ||
                         it.fireStationName.contains(query, true)
                 else -> false
             }

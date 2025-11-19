@@ -37,7 +37,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDdJ1N_5HKH_JHndZvmM7jb4H4VLb2iq1Q"/>
+            android:value="AIzaSyBVf2Xn3leRN-imquAl7QMjhlPE03mgMX4"/>
 
         <meta-data android:name="com.onesignal.NotificationOpened.DEFAULT" android:value="DISABLE" />
 
@@ -68,11 +68,10 @@
         </activity>
 
         <activity android:name=".RegisterActivity"/>
-        <activity android:name=".VerifyEmailActivity"/>
         <activity android:name=".DashboardActivity"/>
         <activity android:name=".FireLevelActivity"/>
         <activity android:name=".OtherEmergencyActivity"/>
-        <activity android:name=".VehicleAccidentActivity"/>
+        <activity android:name=".EmergencyMedicalServicesActivity"/>
         <activity android:name=".ReportSmsActivity"/>
         <activity
             android:name=".FireReportResponseActivity"
