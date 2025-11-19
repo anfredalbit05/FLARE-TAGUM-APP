@@ -544,6 +544,7 @@ class FireLevelActivity : AppCompatActivity() {
                         return@addOnSuccessListener
                     }
 
+
                     // Sort by nearest first
                     stationList.sortBy { it.second }
 
