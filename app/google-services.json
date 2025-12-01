@@ -1,14 +1,14 @@
 {
   "project_info": {
-    "project_number": "149542980129",
-    "firebase_url": "https://flare-tagum-web-app-default-rtdb.firebaseio.com",
-    "project_id": "flare-tagum-web-app",
-    "storage_bucket": "flare-tagum-web-app.firebasestorage.app"
+    "project_number": "1076029231580",
+    "firebase_url": "https://flare-tagum-web-app-51c7a-default-rtdb.firebaseio.com",
+    "project_id": "flare-tagum-web-app-51c7a",
+    "storage_bucket": "flare-tagum-web-app-51c7a.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:149542980129:android:4d288e4f88516071ac3160",
+        "mobilesdk_app_id": "1:1076029231580:android:1dda65168385fcd288bf19",
         "android_client_info": {
           "package_name": "com.example.flare_capstone"
         }
@@ -16,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBGRK1WchpE9pt3zNDWqOVTfNmO6WHBgps"
+          "current_key": "AIzaSyDSL6Yj32jl_9QPoGu7PsG_sL3srX30vN8"
         }
       ],
       "services": {

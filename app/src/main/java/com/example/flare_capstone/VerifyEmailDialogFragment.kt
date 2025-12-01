@@ -25,7 +25,7 @@ class VerifyEmailDialogFragment : DialogFragment() {
 
     private val db = FirebaseDatabase.getInstance()
     private val unverifiedDb = db.getReference("UnverifiedUsers")
-    private val verifiedDb = db.getReference("Users")
+    private val verifiedDb = db.getReference("users")
 
     private val handler = Handler(Looper.getMainLooper())
     private var pollRunnable: Runnable? = null
